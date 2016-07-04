@@ -9,7 +9,7 @@ class LRUcache(object):
         if not isinstance(self._max, int):
             self._max = INFINITY
         self._length_calculator = length
-        if not hasattr(self._length_calculator, '__call__'):
+        if not hasattr(length, '__call__'):
             self._length_calculator = lambda x: 1
         self._allowStale = state
         self._maxAge = age
