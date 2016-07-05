@@ -4,15 +4,15 @@ INFINITY = float('inf')
 
 
 class LRUcache(object):
-    def __init__(self, max=float('inf'), length=None, state=False, age=None, dispose=None):
+    def __init__(self, max=float('inf'), length=None, stale=False, max_age=None, dispose=None):
         self._max = max
         if not isinstance(self._max, int):
             self._max = INFINITY
         self._length_calculator = length
         if not hasattr(length, '__call__'):
             self._length_calculator = lambda x: 1
-        self._allowStale = state
-        self._maxAge = age
+        self._allowStale = stale
+        self._maxAge = max_age
         self._dispose = dispose
         self.reset()
 
@@ -33,8 +33,8 @@ class LRUcache(object):
 
     def reset(self):
         if self._dispose and hasattr(self, "_cache"):
-            for key in self._cache.iteritems():
-                self._dispose(key, self._cache[key].get("value"))
+            for key, value_dict in self._cache.iteritems():
+                self._dispose(key, value_dict.get("value"))
         self._cache = dict()
         self._lrulist = dict()
         self._mru = 0
@@ -82,7 +82,7 @@ class LRUcache(object):
             self.trim()
 
     def set(self, key, value):
-        if self._cache.has_key(key):
+        if key in self._cache:
             if self._dispose:
                 self._dispose(key, self._cache[key].get("value"))
             if self._maxAge:
@@ -92,7 +92,7 @@ class LRUcache(object):
             return True
 
         value_len = self._length_calculator(value)
-        age = datetime.now if self._maxAge else 0
+        age = datetime.now() if self._maxAge else 0
         hit = dict([
             ("key", key),
             ("value", value),
@@ -104,7 +104,7 @@ class LRUcache(object):
 
         if hit.get("len") > self._max:
             if self._dispose:
-                self._dispose(key, self._cache[key].get("value"))
+                self._dispose(key, value)
             return False
 
         self._length += hit.get("len")
@@ -116,25 +116,38 @@ class LRUcache(object):
         return True
 
     def has(self, key):
-        if not hasattr(self._cache, key):
+        if key not in self._cache:
             return False
         hit = self._cache[key]
-        if self._maxAge and datetime.now() - hit.get("age") > self._maxAge:
+        if self._maxAge and (datetime.now() - hit.get("age")).seconds > self._maxAge:
             return False
         return True
 
     def get(self, key, need_update=True):
         hit = self._cache.get(key)
         if hit:
-            if self._maxAge and datetime.now() - hit.get("age") > self._maxAge:
+            if self._maxAge and (datetime.now() - hit.get("age")).seconds > self._maxAge:
                 self._del(hit)
                 if not self._allowStale:
                     hit = None
             else:
                 if need_update:
                     self.use(hit)
-            hit = hit.get("value", "")
+            hit = hit.get("value", "") if hit else hit
         return hit
+
+    def peek(self, key):
+        return self.get(key,need_update=False)
+
+    def pop(self):
+        hit = None
+        try:
+            hit = self._lrulist[self._lru]
+            self.delete(hit.get("key"))
+        except KeyError:
+            pass
+        finally:
+            return hit
 
     def delete(self, key):
         self._del(self._cache.get(key))
