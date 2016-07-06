@@ -59,7 +59,6 @@ class LRUcache(object):
         if self._length > self._max:
             self.trim()
 
-    # didn't check yet
     @property
     def length_calculator(self):
         return self._length_calculator
@@ -80,6 +79,24 @@ class LRUcache(object):
 
         if self._length > self._max:
             self.trim()
+
+    @property
+    def keys(self):
+        keys = []
+        for i in range(self._mru-1, 0, -1):
+            if self._lrulist.get(i):
+                hit = self._lrulist.get(i)
+                keys.append(hit.get("key"))
+        return keys
+
+    @property
+    def values(self):
+        values = []
+        for i in range(self._mru-1, 0, -1):
+            if self._lrulist.get(i):
+                hit = self._lrulist.get(i)
+                values.append(hit.get("value"))
+        return values
 
     def set(self, key, value):
         if key in self._cache:

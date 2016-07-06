@@ -1,3 +1,5 @@
+__author__ = 'denonw'
+
 import unittest
 import time
 from lru_cache.lru_cache import LRUcache
